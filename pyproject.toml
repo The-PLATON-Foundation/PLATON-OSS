@@ -1,0 +1,20 @@
+[project]
+name = "platon-kernel"
+version = "0.1.0"
+description = "A universal virtual language kernel for secure DSL execution."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Your Name", email = "you@example.com"}]
+dependencies = [
+    "tornado>=6.3",
+    "asyncpg>=0.28",
+]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I"] # Error, Pyflakes, Isort
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

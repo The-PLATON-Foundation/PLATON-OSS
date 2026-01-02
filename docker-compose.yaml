@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: platon_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: platon_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - postgres_data:/var/lib/postgresql/data
+
+  server:
+    build: .
+    container_name: platon_server
+    restart: on-failure
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/platon_db
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./src:/app/src
+
+volumes:
+  postgres_data:

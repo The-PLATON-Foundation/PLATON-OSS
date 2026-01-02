@@ -1,0 +1,100 @@
+name: PLATON CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality:
+    name: Code Quality (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Linting Tools
+        run: pip install ruff
+      - name: Run Ruff Check
+        run: ruff check .
+      - name: Run Ruff Format
+        run: ruff format --check .
+
+  tests:
+    name: Tests (Python ${{ matrix.python-version }})
+    needs: quality
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Probamos en varias versiones para asegurar que el motor es robusto
+        python-version: ['3.10', '3.11', '3.12']
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: platon_db
+        ports:
+          - 5432:5432
+        # Esperamos a que la base de datos esté lista antes de empezar
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Instalamos el paquete en modo editable y dependencias
+          pip install -e .
+          pip install pytest pytest-asyncio pytest-cov asyncpg tornado
+
+      - name: Database Migration (Helper)
+        env:
+          DB_URL: postgresql://postgres:password@localhost:5432/platon_db
+        run: |
+          # Creamos el script de inicialización al vuelo para el CI
+          python3 - <<EOF
+          import asyncio
+          import asyncpg
+          import os
+
+          async def init():
+              dsn = os.getenv("DB_URL")
+              conn = await asyncpg.connect(dsn)
+              await conn.execute('''
+                  CREATE TABLE IF NOT EXISTS platon_commands (
+                      internal_id INTEGER PRIMARY KEY,
+                      name VARCHAR(50) UNIQUE NOT NULL,
+                      description TEXT
+                  );
+                  INSERT INTO platon_commands (internal_id, name, description) 
+                  VALUES (0, 'addResult', 'Export execution result')
+                  ON CONFLICT DO NOTHING;
+              ''')
+              await conn.close()
+              print("✅ Database initialized for CI")
+
+          if __name__ == "__main__":
+              asyncio.run(init())
+          EOF
+
+      - name: Run Pytest with Coverage
+        run: |
+          # Muy importante: Definimos el PYTHONPATH para que encuentre el código en 'src'
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          pytest --cov=platon --cov-report=xml tests/test_vm.py
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false

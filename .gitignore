@@ -1,0 +1,35 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+*.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+.installed.cfg
+.eggs/
+
+# --- Entornos Virtuales ---
+venv/
+env/
+ENV/
+.env
+.venv
+
+# --- Base de Datos & Logs ---
+*.log
+*.sqlite
+# Si usas docker-compose para Postgres local
+.db_data/
+
+# --- IDEs & Editores ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+*.avbc
