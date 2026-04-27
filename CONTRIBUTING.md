@@ -1,88 +1,122 @@
-# Contributing to PLATON Kernel
-
-First of all, thank you for taking the time to contribute!.
-
-As an Open Source project, we rely on collaborators to help us build a safe, fast, and universal virtual language kernel.
-
-## [Our Vision]
-The core objective of PLATON is to provide a universal, high-performance kernel that enables anyone to build their own virtual languages. We aim to abstract the complexity of bytecode execution, memory management, and sandboxing, providing a "virtual engine" that powers diverse DSLs.
-
-We are currently in *Phase 1* (Python Bootstrapping) to validate the ISA and logic, with the ultimate goal of migrating the core to Rust (*Phase 2*) for production-grade performance.
-
-## Why PLATON?
-
-PLATON is built on the premise that execution logic should be decoupled from syntax. Our vision is to provide a universal kernel that serves as the "CPU" for your own virtual languages.
-
-- **Language Creator Toolkit**: Use PLATON as the foundation to build rules engines, automation scripts, or custom domain languages without reinventing the VM.
-- **Universal Kernel**: A single, secure core that can interpret any language compiled to its standard Bytecode Portable Format (BPF).
+# Contributing to Platon
 
 ---
 
 ## Code of Conduct
-By participating, you are expected to uphold our standards of inclusivity and respect. Please report any inappropriate behavior to the project maintainers.
 
+This project follows the [Contributor Covenant](https://www.contributor-covenant.org/) v2.1. Report violations to security@101obex.com.
 
-## How Can I Contribute?
+---
 
-### 1. Reporting Bugs
-- Check if the bug has already been reported in the [Issues](https://github.com/youruser/platon-kernel/issues) section.
-- If not, open a new issue using the Bug Report template, including steps to reproduce it.
+## Ways to Contribute
 
-### 2. Suggesting Features
-- We love new Opcodes and DSL ideas!
-- Please open an issue describing the use-case and the proposed bytecode structure.
-
-### 3. Submitting Pull Requests
-1. Fork the repo and create your branch from `main`.
-2. If you've added code that should be tested, add tests!
-3. Ensure the test suite passes.
-4. Make sure your code adheres to the **Ruff** linting standards.
+- **Bug reports** — GitHub Issue with `bug` label and minimal reproduction
+- **Performance improvements** — benchmarks required (before/after)
+- **New `Value` variants** — requires RFC discussion first (breaking change)
+- **ISA contract changes** — requires ADR (breaking change for all ISA implementors)
+- **Documentation** — always welcome
 
 ---
 
 ## Development Setup
 
-### Python Setup
+```bash
+# Clone
+git clone https://github.com/avapcloud/platon
+cd platon
 
-1. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate # On Windows: venv\Scripts\activate
-   ```
-   
-2. Install dev dependencies:
-    ```bash
-    pip install -r requirements-dev.txt
-    ```
+# Build
+maturin develop
 
-### Running Tests
+# Verify
+python3 -c "from platon import VM, Value; print('OK')"
 
-    
-    pytest tests/
-    
-### Code Quality (Linting)
-
-We use Ruff for fast linting and formatting:
-
-    
-    ruff check .      # Check for errors
-    ruff format .     # Auto-format code
-    
-
-## Physical Layout & Bytecode Standards
-
-All contributions must respect the BPF (Bytecode Portable Format) specification:
-
-- Little-Endian for all numeric values.
-
-- Header Size: is fixed at 128 bytes.
-
-- Opcodes: must be added to opcodes.py and documented in the wiki.
-
-## Rust Migration (Phase 2)
-
-We are planning to rewrite the VM core in Rust using Maturin for Python bindings. If you have Rust expertise, please look for issues labeled rust-port.
+# Lint
+cargo clippy -- -D warnings
+cargo fmt --check
+```
 
 ---
 
-Thank you for helping us build the future of secure virtual languages!
+## Project Structure
+
+```
+platon/
+├── src/lib.rs        PyO3 bindings — VM, NativeRegistry, Value, exceptions
+└── platon-core/
+    └── src/lib.rs    Pure Rust — Value, VMState, ISAProvider, InstructionSet
+```
+
+**Rule**: `platon-core` must never depend on PyO3. If you need Python types in a new feature, they belong in `platon/src/lib.rs`.
+
+---
+
+## Key Invariants
+
+These must hold after every change:
+
+1. `platon-core` has zero non-std dependencies
+2. `unsafe` blocks must have a `// SAFETY:` comment explaining the invariant
+3. `VMState` is `Send + Sync` — justify any change that affects this
+4. `Value` is `Clone` — new variants must implement Clone
+5. `ISAProvider` is `Send + Sync` — required for Arc<dyn ISAProvider>
+6. The AVBC bytecode format is forwards-compatible — new header fields go in the reserved region
+
+---
+
+## Adding a New Value Variant
+
+`Value` is the core data type. Adding a variant is a **breaking change** for every ISA implementation — they must handle the new variant in their `match` arms.
+
+Process:
+1. Open a GitHub Discussion proposing the new variant
+2. Get maintainer approval
+3. Update `Value` in `platon-core/src/lib.rs`
+4. Update all `match` arms in `platon-core` (type_name, is_truthy, eq_val, get_item, set_item, contains, to_string_repr)
+5. Update `core_from_py` and `core_to_py` in `platon/src/lib.rs`
+6. Bump minor version
+7. Notify downstream ISA maintainers
+
+---
+
+## Changing the ISAProvider Contract
+
+Any change to the `ISAProvider` trait or `InstructionFn` signature is a breaking change. Requires:
+1. ADR document
+2. Coordination with `avap-isa` maintainers
+3. Major version bump
+
+---
+
+## Pull Request Requirements
+
+- `cargo test` passes
+- `cargo clippy -- -D warnings` passes
+- `cargo fmt` applied
+- `CHANGELOG.md` updated under `[Unreleased]`
+- New `unsafe` blocks have `// SAFETY:` comments
+- Breaking changes have an ADR
+
+---
+
+## Commit Messages
+
+[Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+feat(core): add Value::Bytes variant
+fix(vm): prevent double-free of registry_ptr on execute() error
+perf(vm): avoid Vec allocation in execute() hot loop
+docs(adr): add ADR-010 for Value::Bytes
+chore(deps): update pyo3 to 0.22
+```
+
+---
+
+## Questions
+
+Open a GitHub Discussion or contact dev@101obex.com.
+
+---
+
+*Author: Rafael Ruiz, CTO — The Platon Foundation*

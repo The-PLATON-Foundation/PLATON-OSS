@@ -1,20 +1,20 @@
-[project]
-name = "platon-kernel"
-version = "0.1.0"
-description = "A universal virtual language kernel for secure DSL execution."
-readme = "README.md"
-requires-python = ">=3.10"
-license = {text = "MIT"}
-authors = [{name = "Your Name", email = "you@example.com"}]
-dependencies = [
-    "tornado>=6.3",
-    "asyncpg>=0.28",
-]
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
 
-[tool.ruff]
-line-length = 100
-select = ["E", "F", "I"] # Error, Pyflakes, Isort
+[project]
+name = "platon"
+version = "0.3.0"
+description = "Language-agnostic virtual machine kernel"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "maturin>=1.5"]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "python"
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
 testpaths = ["tests"]

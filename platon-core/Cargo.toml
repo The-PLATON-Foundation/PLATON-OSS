@@ -1,0 +1,13 @@
+[package]
+name = "platon-core"
+version = "0.3.0"
+edition = "2021"
+description = "Platon kernel core types — pure Rust, no Python"
+license = "MIT"
+
+[lib]
+name = "platon_core"
+crate-type = ["rlib"]
+
+[dependencies]
+# No PyO3 — pure Rust
