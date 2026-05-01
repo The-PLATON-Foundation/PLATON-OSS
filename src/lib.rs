@@ -121,7 +121,7 @@ impl NativeRegistry {
     fn register_command(&self, name: String, func_id: u32, py_func: PyObject) -> PyResult<()> {
         self.functions.lock().unwrap().insert(func_id, py_func);
         self.names_to_ids.lock().unwrap().insert(name.clone(), func_id);
-        println!("[PLATON] Registered: {} [ID: {}]", name, func_id);
+        //println!("[PLATON] Registered: {} [ID: {}]", name, func_id);
         Ok(())
     }
     fn get_id_by_name(&self, name: &str) -> i64 {

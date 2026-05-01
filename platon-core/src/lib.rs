@@ -133,6 +133,11 @@ pub struct VMState {
     pub constants:    Vec<Value>,
     pub try_stack:    Vec<usize>,
     pub debug:        bool,
+    // Call frame stack: each entry is the local scope of a function invocation.
+    // PUSH_FRAME pushes a new HashMap; POP_FRAME removes it.
+    // LOAD checks frames (innermost first) before falling back to globals.
+    // STORE writes to the innermost frame when one is active, else to globals.
+    pub frames:       Vec<HashMap<String, Value>>,
     // Special namespaces written by STORE_RESULT / SET_CONECTOR_VAR opcodes
     // These are exposed back to Python after execute() completes.
     pub results:      HashMap<String, Value>,
@@ -154,6 +159,7 @@ impl VMState {
             constants:     Vec::new(),
             try_stack:     Vec::new(),
             debug:         false,
+            frames:        Vec::new(),
             results:       HashMap::new(),
             conector_vars: HashMap::new(),
             registry_ptr:  std::ptr::null_mut(),
